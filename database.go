@@ -1,5 +1,11 @@
 package transfer
 
+import (
+	jsoniter "github.com/json-iterator/go"
+)
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
 // Driver for database
 type Driver struct {
 	Driver   string `mapstructure:"driver"`
@@ -22,8 +28,34 @@ type Field struct {
 // value: target
 type Mapping map[string]struct {
 	Source     string      `mapstructure:"source"`
-	SourceType interface{} `mapstructure:"source_type"`
 	Target     string      `mapstructure:"target"`
 	TargetType interface{} `mapstructure:"target_type"`
 	Converter  string      `mapstructure:"converter"`
+}
+
+// M transfer data type
+type M map[string]interface{}
+
+// Pagination for database
+type Pagination struct {
+	Page int
+	Size int
+}
+
+// Query database query
+type Query struct {
+	Q    interface{}
+	Page *int
+	Size *int
+}
+
+// UnmarshalQuery implements the json.Marshaler interface.
+func (q Query) UnmarshalQuery(v interface{}) error {
+
+	byteData, err := json.Marshal(q)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal([]byte(byteData), &v)
 }
