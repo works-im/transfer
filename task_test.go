@@ -9,7 +9,7 @@ import (
 func TestTask(t *testing.T) {
 	assert := assert.New(t)
 
-	args := &MongoOptions{
+	args := &DatabaseOptions{
 		Driver: Driver{
 			Host:     "localhost",
 			Port:     "27017",
@@ -25,19 +25,19 @@ func TestTask(t *testing.T) {
 	assert.NotNil(db)
 	assert.Nil(err)
 
-	query := []M{
-		{
-			"$project": M{
-				"_id":           1,
-				"uid":           1,
-				"resource_type": "$atomic.atomic_class_info.resource_type",
+	query := Query{
+		Q: []M{
+			{
+				"$project": M{
+					"_id":           1,
+					"uid":           1,
+					"resource_type": "$atomic.atomic_class_info.resource_type",
+				},
 			},
 		},
 	}
 
-	paginator := &Pagination{}
-
-	result, err := db.Reader(query, paginator)
+	result, err := db.Reader(query)
 	assert.Nil(err)
 	assert.NotEmpty(result)
 }

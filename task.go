@@ -2,33 +2,92 @@ package transfer
 
 // Source for transfer
 type Source interface {
-	Reader(query Query) error
+	Reader(query Query) (Packet, error)
 }
 
 // Target for transfer
 type Target interface {
-	Writer(data []M) error
+	Writer(packet Packet) error
+}
+
+// Configuration task configuration
+type Configuration struct {
+	Source struct {
+		Driver Driver `mapstructure:"driver"`
+		Table  string `mapstructure:"table"`
+	} `mapstructure:"source"`
+
+	Target struct {
+		Driver Driver `mapstructure:"driver"`
+		Table  string `mapstructure:"table"`
+	} `mapstructure:"target"`
+
+	Mapping Mapping `mapstructure:"mapping"`
+	Query   Query   `mapstructure:"query"`
 }
 
 // Task for transfer
 type Task struct {
-	Source    Source
-	Target    Target
-	Goroutine int
-	Mapping   Mapping
+	config Configuration
+	Query  Query
+	Source Source
+	Target Target
+}
 
-	// Channel
+// NewTask return task
+func NewTask(config Configuration) (task *Task, err error) {
+
+	task = &Task{
+		config: config,
+		Query:  config.Query,
+	}
+
+	sourceOptions := &DatabaseOptions{
+		Driver:    config.Source.Driver,
+		TableName: config.Source.Table,
+		Mapping:   config.Mapping,
+	}
+
+	if task.Source, err = GenerateSourceTransfer(sourceOptions); err != nil {
+		return nil, err
+	}
+
+	targetOptions := &DatabaseOptions{
+		Driver:    config.Source.Driver,
+		TableName: config.Source.Table,
+		Mapping:   config.Mapping,
+	}
+
+	if task.Target, err = GenerateTargetTransfer(targetOptions); err != nil {
+		return nil, err
+	}
+
+	return task, nil
 }
 
 // Run task
-func (task *Task) Run() error {
+func (task *Task) Run() (err error) {
 
-	// itr, err := task.Source.Reader()
-	// defer itr.Close()
-	// for itr.Next() {
-	// 	key, value := itr.Value()
-	// }
-	// task.Source.Reader("", task.Target)
+	var (
+		result []M
+		query  = task.Query
+	)
 
-	return nil
+	for {
+		if result, err = task.Source.Reader(query); err != nil {
+			break
+		}
+
+		if err = task.Target.Writer(result); err != nil {
+			return err
+		}
+
+		query.Page++
+
+		if uint(len(result)) < query.Size {
+			break
+		}
+	}
+
+	return
 }

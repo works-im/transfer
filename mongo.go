@@ -3,7 +3,6 @@ package transfer
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,25 +10,18 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// MongoOptions mongodb options
-type MongoOptions struct {
-	Driver    Driver
-	Database  string
-	TableName string
-	Fields    []Field
-}
-
 // MongoDB database transfer
 type MongoDB struct {
 	client     *mongo.Client
 	database   string
 	collection string
-	fields     []Field
 	ctx        context.Context
+
+	Mapping *Mapping
 }
 
 // NewMongoDB return MongoDB transfer
-func NewMongoDB(args *MongoOptions) (*MongoDB, error) {
+func NewMongoDB(args *DatabaseOptions) (*MongoDB, error) {
 
 	var (
 		opts = options.Client()
@@ -58,6 +50,7 @@ func NewMongoDB(args *MongoOptions) (*MongoDB, error) {
 		client:     client,
 		database:   args.Driver.Database,
 		collection: args.TableName,
+		Mapping:    &args.Mapping,
 	}
 
 	// set context
@@ -76,7 +69,7 @@ func NewMongoDB(args *MongoOptions) (*MongoDB, error) {
 
 // Reader database
 // query: aggregation https://docs.mongodb.com/manual/aggregation/
-func (mongo *MongoDB) Reader(query Query) (result []M, err error) {
+func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 
 	collection := mongo.client.Database(mongo.database).Collection(mongo.collection)
 
@@ -86,12 +79,12 @@ func (mongo *MongoDB) Reader(query Query) (result []M, err error) {
 		return nil, err
 	}
 
-	if query.Page != nil && query.Size != nil {
-		pipeline = append(pipeline, bson.E{
-			Key:   "$skip",
-			Value: query.Page,
-		})
+	pipeline = append(pipeline, bson.E{
+		Key:   "$skip",
+		Value: (query.Page - 1) * query.Size,
+	})
 
+	if query.Size > 0 {
 		pipeline = append(pipeline, bson.E{
 			Key:   "$limit",
 			Value: query.Size,
@@ -110,13 +103,13 @@ func (mongo *MongoDB) Reader(query Query) (result []M, err error) {
 		if err := cur.Decode(&row); err != nil {
 			return nil, err
 		}
-		result = append(result, row)
+		packet = append(packet, row)
 	}
 
-	return result, cur.Err()
+	return packet, cur.Err()
 }
 
 // Writer data
-func (mongo *MongoDB) Writer(data []M) error {
+func (mongo *MongoDB) Writer(packet Packet) error {
 	return nil
 }

@@ -6,25 +6,26 @@ import (
 
 // MySQL database transfer
 type MySQL struct {
+	Driver    Driver
 	TableName string
-	Fields    []Field
+	Mapping   Mapping
 }
 
 // NewMySQL return MySQL transfer
-func NewMySQL() *MySQL {
-	return &MySQL{}
+func NewMySQL(args *DatabaseOptions) (*MySQL, error) {
+	return &MySQL{}, nil
 }
 
 // Reader database
-func (mongo *MySQL) Reader(query interface{}, paginator *Pagination) error {
+func (mongo *MySQL) Reader(query Query) (packet Packet, err error) {
 
-	return nil
+	return nil, nil
 }
 
 // Writer data
-func (mongo *MySQL) Writer(data []M) error {
+func (mongo *MySQL) Writer(packet Packet) error {
 
-	fmt.Printf("%#v\n", data)
+	fmt.Printf("%#v\n", packet)
 
 	return nil
 }
