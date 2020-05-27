@@ -7,6 +7,7 @@ task:
       database:
       username:
       password:
+    table: atomics
   target:
     driver:
       driver: mysql
