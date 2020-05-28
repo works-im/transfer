@@ -9,35 +9,62 @@ import (
 func TestTask(t *testing.T) {
 	assert := assert.New(t)
 
-	args := &DatabaseOptions{
-		Driver: Driver{
+	config := Configuration{
+		Source: Driver{
+			Driver:   "mongodb",
 			Host:     "localhost",
-			Port:     "27017",
+			Port:     27017,
 			Username: "root",
 			Password: "",
 			Database: "qvm-order",
+			Table:    "atomic",
 		},
-		TableName: "atomic",
-	}
 
-	db, err := NewMongoDB(args)
+		Target: Driver{
+			Driver:   "mysql",
+			Host:     "localhost",
+			Port:     3306,
+			Username: "root",
+			Password: "root",
+			Database: "qvm-order",
+			Table:    "atomics",
+		},
 
-	assert.NotNil(db)
-	assert.Nil(err)
-
-	query := Query{
-		Q: []M{
+		Mapping: []Field{
 			{
-				"$project": M{
-					"_id":           1,
-					"uid":           1,
-					"resource_type": "$atomic.atomic_class_info.resource_type",
-				},
+				Source:     "_id",
+				Target:     "id",
+				TargetType: "string",
+			},
+			{
+				Source:     "uid",
+				Target:     "uid",
+				TargetType: "uint",
+			},
+			{
+				Source:     "atomic.atomic_class_info.resource_type",
+				Target:     "resource_type",
+				TargetType: "string",
 			},
 		},
+
+		Query: Query{
+			Q: []M{
+				{
+					"$match": M{
+						"uid": M{"$gt": 0},
+					},
+				},
+			},
+			Page: 1,
+			Size: 100,
+		},
 	}
 
-	result, err := db.Reader(query)
+	task, err := NewTask(config)
 	assert.Nil(err)
-	assert.NotEmpty(result)
+	assert.NotNil(task)
+
+	err = task.Run()
+	assert.Nil(err)
 }

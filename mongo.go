@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -15,9 +14,8 @@ type MongoDB struct {
 	client     *mongo.Client
 	database   string
 	collection string
-	ctx        context.Context
 
-	Mapping *Mapping
+	Mapping Mapping
 }
 
 // NewMongoDB return MongoDB transfer
@@ -25,7 +23,7 @@ func NewMongoDB(args *DatabaseOptions) (*MongoDB, error) {
 
 	var (
 		opts = options.Client()
-		host = fmt.Sprintf("%s:%s", args.Driver.Host, args.Driver.Port)
+		host = fmt.Sprintf("%s:%d", args.Driver.Host, args.Driver.Port)
 	)
 
 	opts.Hosts = []string{host}
@@ -46,22 +44,19 @@ func NewMongoDB(args *DatabaseOptions) (*MongoDB, error) {
 		client.Database(args.Driver.Database)
 	}
 
-	db := &MongoDB{
-		client:     client,
-		database:   args.Driver.Database,
-		collection: args.TableName,
-		Mapping:    &args.Mapping,
-	}
-
-	// set context
+	// connect database
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	db.ctx = ctx
-
-	// connect database
-	if err := db.client.Connect(ctx); err != nil {
+	if err := client.Connect(ctx); err != nil {
 		return nil, err
+	}
+
+	db := &MongoDB{
+		client:     client,
+		database:   args.Driver.Database,
+		collection: args.Driver.Table,
+		Mapping:    args.Mapping,
 	}
 
 	return db, nil
@@ -73,32 +68,43 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 
 	collection := mongo.client.Database(mongo.database).Collection(mongo.collection)
 
-	pipeline := bson.D{}
+	pipeline := []M{}
 
 	if err := query.UnmarshalQuery(&pipeline); err != nil {
 		return nil, err
 	}
 
-	pipeline = append(pipeline, bson.E{
-		Key:   "$skip",
-		Value: (query.Page - 1) * query.Size,
-	})
-
-	if query.Size > 0 {
-		pipeline = append(pipeline, bson.E{
-			Key:   "$limit",
-			Value: query.Size,
-		})
+	// select fields
+	if len(mongo.Mapping) > 0 {
+		fields := M{}
+		for _, field := range mongo.Mapping {
+			fields[field.Target] = "$" + field.Source
+		}
+		pipeline = append(pipeline, M{"$project": fields})
 	}
 
-	cur, err := collection.Aggregate(mongo.ctx, pipeline)
+	// offset
+	pipeline = append(pipeline, M{"$skip": (query.Page - 1) * query.Size})
+
+	// page limit
+	if query.Size > 0 {
+		pipeline = append(pipeline, M{"$limit": query.Size})
+	}
+
+	fmt.Printf("pipeline: %#v\n\n", pipeline)
+
+	// set context
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cur, err := collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 
-	defer cur.Close(mongo.ctx)
+	defer cur.Close(ctx)
 
-	for cur.Next(mongo.ctx) {
+	for cur.Next(ctx) {
 		var row M
 		if err := cur.Decode(&row); err != nil {
 			return nil, err

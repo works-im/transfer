@@ -1,16 +1,19 @@
 package transfer
 
-// Mapping database field mapping
+// Field with database mapping
 // source database field name
 // target database filed name
 // target_type target database field data type
 // TODO: converter transfer script template
-type Mapping map[string]struct {
+type Field struct {
 	Source     string `mapstructure:"source"`
 	Target     string `mapstructure:"target"`
 	TargetType string `mapstructure:"target_type"`
 	Converter  string `mapstructure:"converter"`
 }
+
+// Mapping for database fields map
+type Mapping []Field
 
 // M transfer data type
 type M map[string]interface{}

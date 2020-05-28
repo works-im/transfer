@@ -12,15 +12,8 @@ type Target interface {
 
 // Configuration task configuration
 type Configuration struct {
-	Source struct {
-		Driver Driver `mapstructure:"driver"`
-		Table  string `mapstructure:"table"`
-	} `mapstructure:"source"`
-
-	Target struct {
-		Driver Driver `mapstructure:"driver"`
-		Table  string `mapstructure:"table"`
-	} `mapstructure:"target"`
+	Source Driver `mapstructure:"source"`
+	Target Driver `mapstructure:"target"`
 
 	Mapping Mapping `mapstructure:"mapping"`
 	Query   Query   `mapstructure:"query"`
@@ -43,9 +36,8 @@ func NewTask(config Configuration) (task *Task, err error) {
 	}
 
 	sourceOptions := &DatabaseOptions{
-		Driver:    config.Source.Driver,
-		TableName: config.Source.Table,
-		Mapping:   config.Mapping,
+		Driver:  config.Source,
+		Mapping: config.Mapping,
 	}
 
 	if task.Source, err = GenerateSourceTransfer(sourceOptions); err != nil {
@@ -53,9 +45,8 @@ func NewTask(config Configuration) (task *Task, err error) {
 	}
 
 	targetOptions := &DatabaseOptions{
-		Driver:    config.Source.Driver,
-		TableName: config.Source.Table,
-		Mapping:   config.Mapping,
+		Driver:  config.Target,
+		Mapping: config.Mapping,
 	}
 
 	if task.Target, err = GenerateTargetTransfer(targetOptions); err != nil {
@@ -75,7 +66,7 @@ func (task *Task) Run() (err error) {
 
 	for {
 		if result, err = task.Source.Reader(query); err != nil {
-			break
+			return err
 		}
 
 		if err = task.Target.Writer(result); err != nil {
@@ -84,7 +75,7 @@ func (task *Task) Run() (err error) {
 
 		query.Page++
 
-		if uint(len(result)) < query.Size {
+		if len(result) < query.Size {
 			break
 		}
 	}
