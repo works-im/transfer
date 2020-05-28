@@ -10,24 +10,25 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 type Driver struct {
 	Driver   string `mapstructure:"driver"`
 	Host     string `mapstructure:"host"`
-	Port     string `mapstructure:"port"`
+	Port     int    `mapstructure:"port"`
 	SSLMode  string `mapstructure:"ssl_mode"`
 	Database string `mapstructure:"database"`
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
+	Table    string `mapstructure:"table"`
 }
 
 // Query database query
 type Query struct {
 	Q    interface{} `mapstructure:"q"`
-	Page uint        `mapstructure:"page"`
-	Size uint        `mapstructure:"size"`
+	Page int         `mapstructure:"page"`
+	Size int         `mapstructure:"size"`
 }
 
 // UnmarshalQuery implements the json.Marshaler interface.
 func (q Query) UnmarshalQuery(v interface{}) error {
 
-	byteData, err := json.Marshal(q)
+	byteData, err := json.Marshal(q.Q)
 	if err != nil {
 		return err
 	}
@@ -37,9 +38,8 @@ func (q Query) UnmarshalQuery(v interface{}) error {
 
 // DatabaseOptions for transfer
 type DatabaseOptions struct {
-	Driver    Driver
-	TableName string
-	Mapping   Mapping
+	Driver  Driver
+	Mapping Mapping
 }
 
 // GenerateSourceTransfer return source transfer
