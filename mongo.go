@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -91,8 +92,6 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 		pipeline = append(pipeline, M{"$limit": query.Size})
 	}
 
-	fmt.Printf("pipeline: %#v\n\n", pipeline)
-
 	// set context
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -109,6 +108,14 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 		if err := cur.Decode(&row); err != nil {
 			return nil, err
 		}
+
+		for field, value := range row {
+			// ObjectID to string
+			if id, ok := value.(primitive.ObjectID); ok {
+				row[field] = id.Hex()
+			}
+		}
+
 		packet = append(packet, row)
 	}
 
