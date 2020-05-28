@@ -1,34 +1,31 @@
 task:
   source:
-    driver:
-      driver: mongodb
-      host: localhost
-      port: 27017
-      database:
-      username:
-      password:
+    driver: mongodb
+    host: localhost
+    port: 27017
+    database:
+    username:
+    password:
+    table: atomic
   target:
-    driver:
-      driver: mysql
-      host: localhost
-      port: 3306
-      database:
-      username:
-      password:
+    driver: mysql
+    host: localhost
+    port: 3306
+    database:
+    username:
+    password:
     table: atomics
   mapping:
     - source: _id
       target: mongo_id
       target_type: string
     - source: atomic.atomic_class_info.resource_type
-      source_type:
       target: resource_type
       target_type: string
   query:
     page: 1
     size: 1000
     q:
-      - $project:
-        _id: 1
-        uid: 1
-        resource_type: "$atomic.atomic_class_info.resource_type"
+      - $match:
+          uid:
+            $gt: 0

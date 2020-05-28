@@ -10,52 +10,60 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 type Driver struct {
 	Driver   string `mapstructure:"driver"`
 	Host     string `mapstructure:"host"`
-	Port     string `mapstructure:"port"`
+	Port     int    `mapstructure:"port"`
 	SSLMode  string `mapstructure:"ssl_mode"`
 	Database string `mapstructure:"database"`
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
-}
-
-// Field database field
-type Field struct {
-	Name string
-	Type interface{}
-}
-
-// Mapping database field mapping
-// key: source
-// value: target
-type Mapping map[string]struct {
-	Source     string      `mapstructure:"source"`
-	Target     string      `mapstructure:"target"`
-	TargetType interface{} `mapstructure:"target_type"`
-	Converter  string      `mapstructure:"converter"`
-}
-
-// M transfer data type
-type M map[string]interface{}
-
-// Pagination for database
-type Pagination struct {
-	Page int
-	Size int
+	Table    string `mapstructure:"table"`
 }
 
 // Query database query
 type Query struct {
-	Q    interface{}
-	Page *int
-	Size *int
+	Q    interface{} `mapstructure:"q"`
+	Page int         `mapstructure:"page"`
+	Size int         `mapstructure:"size"`
 }
 
 // UnmarshalQuery implements the json.Marshaler interface.
 func (q Query) UnmarshalQuery(v interface{}) error {
 
-	byteData, err := json.Marshal(q)
+	byteData, err := json.Marshal(q.Q)
 	if err != nil {
 		return err
 	}
 
 	return json.Unmarshal([]byte(byteData), &v)
+}
+
+// DatabaseOptions for transfer
+type DatabaseOptions struct {
+	Driver  Driver
+	Mapping Mapping
+}
+
+// GenerateSourceTransfer return source transfer
+func GenerateSourceTransfer(args *DatabaseOptions) (source Source, err error) {
+
+	switch args.Driver.Driver {
+	case "mongodb":
+		source, err = NewMongoDB(args)
+	case "mysql":
+		source, err = NewMySQL(args)
+	}
+
+	return
+}
+
+// GenerateTargetTransfer return target transfer
+func GenerateTargetTransfer(args *DatabaseOptions) (target Target, err error) {
+
+	switch args.Driver.Driver {
+	case "mongodb":
+		target, err = NewMongoDB(args)
+	case "mysql":
+		target, err = NewMySQL(args)
+	}
+
+	return
 }
