@@ -58,15 +58,20 @@ func (mysql *MySQL) Reader(query Query) (packet Packet, err error) {
 // Writer data
 func (mysql *MySQL) Writer(packet Packet) error {
 
+	var (
+		fields       = mysql.Mapping.Fields()
+		updateFields []string
+	)
+
+	for _, field := range mysql.Mapping {
+		updateFields = append(updateFields, fmt.Sprintf("%s=VALUES(%s)", field.Target, field.Target))
+	}
+
 	for _, row := range packet {
 
-		var fields []string
 		var values []string
-		var updateFields []string
 		for _, field := range mysql.Mapping {
-			fields = append(fields, field.Target)
 			values = append(values, "'"+fmt.Sprint(row[field.Target])+"'")
-			updateFields = append(updateFields, fmt.Sprintf("%s=VALUES(%s)", field.Target, field.Target))
 		}
 
 		sql := fmt.Sprintf(
@@ -77,7 +82,7 @@ func (mysql *MySQL) Writer(packet Packet) error {
 			strings.Join(updateFields, ", "),
 		)
 
-		fmt.Printf("sql: %#v\n", sql)
+		fmt.Printf("sql: %s\n", sql)
 
 		if _, err := mysql.db.Exec(sql); err != nil {
 			return err

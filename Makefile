@@ -1,0 +1,6 @@
+install:
+	go mod download
+
+build:
+	go clean -i ./app/...
+	CGO_ENABLED=0 go build -o ./bin/transfer -v ./app/...
