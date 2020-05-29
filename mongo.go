@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -77,11 +76,7 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 
 	// select fields
 	if len(mongo.Mapping) > 0 {
-		fields := M{}
-		for _, field := range mongo.Mapping {
-			fields[field.Target] = "$" + field.Source
-		}
-		pipeline = append(pipeline, M{"$project": fields})
+		pipeline = append(pipeline, M{"$project": mongo.Mapping.FieldMap("$")})
 	}
 
 	// offset
@@ -93,8 +88,7 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 	}
 
 	// set context
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	cur, err := collection.Aggregate(ctx, pipeline)
 	if err != nil {
@@ -109,14 +103,17 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 			return nil, err
 		}
 
-		for field, value := range row {
-			// ObjectID to string
-			if id, ok := value.(primitive.ObjectID); ok {
-				row[field] = id.Hex()
-			}
+		data, err := row.Primitive()
+		if err != nil {
+			return nil, err
 		}
 
-		packet = append(packet, row)
+		pack := M{}
+		for _, field := range mongo.Mapping {
+			pack[field.Target] = data[field.Target]
+		}
+
+		packet = append(packet, pack)
 	}
 
 	return packet, cur.Err()
