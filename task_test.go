@@ -2,6 +2,7 @@ package transfer
 
 import (
 	"testing"
+	"transfer/database"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -10,7 +11,7 @@ func TestTask(t *testing.T) {
 	assert := assert.New(t)
 
 	config := Configuration{
-		Source: Driver{
+		Source: database.Driver{
 			Driver:   "mongodb",
 			Host:     "localhost",
 			Port:     27017,
@@ -20,7 +21,7 @@ func TestTask(t *testing.T) {
 			Table:    "atomic",
 		},
 
-		Target: Driver{
+		Target: database.Driver{
 			Driver:   "mysql",
 			Host:     "localhost",
 			Port:     3306,
@@ -30,7 +31,7 @@ func TestTask(t *testing.T) {
 			Table:    "atomics",
 		},
 
-		Mapping: []Field{
+		Mapping: []*database.Field{
 			{
 				Source:     "_id",
 				Target:     "id",
@@ -48,11 +49,11 @@ func TestTask(t *testing.T) {
 			},
 		},
 
-		Query: Query{
-			Q: []M{
+		Query: database.Query{
+			Q: []database.M{
 				{
-					"$match": M{
-						"uid": M{"$gt": 0},
+					"$match": database.M{
+						"uid": database.M{"$gt": 0},
 					},
 				},
 			},

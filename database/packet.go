@@ -1,4 +1,4 @@
-package transfer
+package database
 
 // Field with database mapping
 // source database field name
@@ -6,14 +6,22 @@ package transfer
 // target_type target database field data type
 // TODO: converter transfer script template
 type Field struct {
-	Source     string `mapstructure:"source"`
-	Target     string `mapstructure:"target"`
-	TargetType string `mapstructure:"target_type"`
-	Converter  string `mapstructure:"converter"`
+	Source     string    `mapstructure:"source"`
+	Target     string    `mapstructure:"target"`
+	TargetType FieldType `mapstructure:"target_type"`
+	Converter  string    `mapstructure:"converter"`
 }
 
+// FieldType for field database field type
+type FieldType string
+
+const (
+	// FieldTimestamp timestamp type
+	FieldTimestamp FieldType = "timestamp"
+)
+
 // Mapping for database fields map
-type Mapping []Field
+type Mapping []*Field
 
 // Map return field mapping
 func (mapping Mapping) Map() M {

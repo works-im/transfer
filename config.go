@@ -1,10 +1,14 @@
 package transfer
 
+import (
+	"transfer/database"
+)
+
 // Configuration task configuration
 type Configuration struct {
-	Source Driver `mapstructure:"source"`
-	Target Driver `mapstructure:"target"`
+	Source database.Driver `mapstructure:"source"`
+	Target database.Driver `mapstructure:"target"`
 
-	Mapping Mapping `mapstructure:"mapping"`
-	Query   Query   `mapstructure:"query"`
+	Mapping database.Mapping `mapstructure:"mapping"`
+	Query   database.Query   `mapstructure:"query"`
 }

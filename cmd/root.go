@@ -9,6 +9,7 @@ import (
 )
 
 var cfgFile string
+var taskName string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -18,7 +19,9 @@ var rootCmd = &cobra.Command{
 
 	// Uncomment the following line if your bare application has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("root comment exec")
+		fmt.Println("root comment exec", args)
+
+		fmt.Printf("task: %#v\n", taskName)
 	},
 }
 
@@ -42,6 +45,7 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./task.yaml)")
+	rootCmd.PersistentFlags().StringVar(&taskName, "task", "", "Task name")
 }
 
 // initConfig reads in config file and ENV variables if set.
