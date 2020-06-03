@@ -45,7 +45,6 @@ var databaseCmd = &cobra.Command{
 			var wg sync.WaitGroup
 
 			for _, config := range configs {
-				fmt.Printf("task config: %#v\n", config)
 
 				wg.Add(1)
 
