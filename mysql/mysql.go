@@ -57,77 +57,6 @@ func NewMySQL(args *database.Options) (*MySQL, error) {
 	return mysql, nil
 }
 
-// Reader database
-func (mysql *MySQL) Reader(query database.Query) (packet database.Packet, err error) {
-
-	return nil, nil
-}
-
-// Writer data
-func (mysql *MySQL) Writer(packet database.Packet) error {
-
-	var (
-		fields       = mysql.Mapping.Fields()
-		updateFields []string
-	)
-
-	for _, field := range mysql.Mapping {
-		updateFields = append(updateFields, fmt.Sprintf("%s=VALUES(%s)", field.Target, field.Target))
-	}
-
-	for _, row := range packet {
-
-		var values []string
-		for _, field := range mysql.Mapping {
-			value := row[field.Target]
-
-			// 忽略 nil
-			if nil == value {
-				continue
-			}
-
-			switch value.(type) {
-			case int64, float64, bool:
-				values = append(values, fmt.Sprint(value))
-				continue
-			}
-
-			switch field.TargetType {
-			case "timestamp":
-				time, err := dateparse.ParseAny(fmt.Sprint(value))
-				if err != nil {
-					return err
-				}
-				values = append(values, "FROM_UNIXTIME("+fmt.Sprint(time.Unix())+")")
-			default:
-				values = append(values, "'"+fmt.Sprint(value)+"'")
-			}
-		}
-
-		sql := fmt.Sprintf(
-			"INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s",
-			mysql.TableName,
-			strings.Join(fields, ", "),
-			strings.Join(values, ", "),
-			strings.Join(updateFields, ", "),
-		)
-
-		fmt.Printf("sql: %s\n", sql)
-
-		result, err := mysql.db.Exec(sql)
-		if err != nil {
-			return err
-		}
-
-		affectedRows, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		fmt.Println("affected rows: ", affectedRows)
-	}
-	return nil
-}
-
 // TableSchema return table schema
 func (mysql *MySQL) TableSchema() error {
 	rows, err := mysql.db.Query("DESCRIBE " + mysql.TableName)
@@ -161,30 +90,109 @@ func (mysql *MySQL) TableSchema() error {
 	return rows.Err()
 }
 
-// Fields func
-func (mysql *MySQL) Fields() map[string]Field {
+// MappingFields return map[source]Field
+func (mysql *MySQL) MappingFields() []Field {
 
-	var fields []string
 	dbFields := mysql.schema.FieldMap()
 
-	var fs = map[string]Field{}
+	var fields = []Field{}
 
-	for _, field := range mysql.Mapping {
+	for _, mappingField := range mysql.Mapping {
 
-		if v, e := dbFields[field.Target]; e {
+		if meta, exists := dbFields[mappingField.Target]; exists {
 
-			fields = append(fields, v.Field)
-
-			if ts := strings.Split(v.Type, "("); len(ts) > 0 {
-				fs[v.Field] = Field{
-					Name:      v.Field,
+			if ts := strings.Split(strings.ToLower(meta.Type), "("); len(ts) > 0 {
+				field := Field{
+					Name:      meta.Field,
 					Type:      DateType(ts[0]),
-					Converter: field.Converter,
+					Converter: mappingField.Converter,
 				}
+				fields = append(fields, field)
 			}
-
 		}
 	}
 
-	return fs
+	return fields
+}
+
+// Reader database
+func (mysql *MySQL) Reader(query database.Query) (packet database.Packet, err error) {
+
+	return nil, nil
+}
+
+// Writer data
+func (mysql *MySQL) Writer(packet database.Packet) error {
+
+	var (
+		mappingFields = mysql.MappingFields()
+	)
+
+	for _, row := range packet {
+
+		var (
+			selectFields []string
+			values       []string
+			updateFields []string
+		)
+
+		for _, field := range mappingFields {
+
+			selectFields = append(selectFields, field.Name)
+			updateFields = append(updateFields, fmt.Sprintf("%s=VALUES(%s)", field.Name, field.Name))
+
+			value := row[field.Name]
+			if nil == value {
+				values = append(values, "NULL")
+				continue
+			}
+
+			switch field.Type {
+			case Tinyint, SmallInt, MediumInt, Int, Integer, BigInt, Float, Double, Decimal:
+				values = append(values, fmt.Sprint(value))
+
+			case Char, Varchar, TinyText, Text, MediumText, LongText:
+				values = append(values, "'"+fmt.Sprint(value)+"'")
+
+			case TinyBlob, Blob, MediumBlob, LongBlob:
+				values = append(values, "'"+fmt.Sprint(value)+"'")
+
+			case Date, Time, Year, Datetime, Timestamp:
+				time, err := dateparse.ParseAny(fmt.Sprint(value))
+				if err != nil {
+					return err
+				}
+				switch field.Type {
+				case Date, Time, Year:
+					values = append(values, field.Type.String()+"(FROM_UNIXTIME("+fmt.Sprint(time.Unix())+"))")
+				case Datetime, Timestamp:
+					values = append(values, "FROM_UNIXTIME("+fmt.Sprint(time.Unix())+")")
+				}
+			}
+		}
+
+		// INSERT INTO table_name (field1, field2) VALUES (value1, value2) ON DUPLICATE KEY UPDATE field1=VALUES(field1), field2=VALUES(field2)
+		sql := fmt.Sprintf(
+			"INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s",
+			mysql.TableName,
+			strings.Join(selectFields, ", "),
+			strings.Join(values, ", "),
+			strings.Join(updateFields, ", "),
+		)
+
+		fmt.Printf("sql: %s\n", sql)
+
+		result, err := mysql.db.Exec(sql)
+		if err != nil {
+			return err
+		}
+
+		affectedRows, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		fmt.Println("affected rows: ", affectedRows)
+	}
+
+	return nil
 }
