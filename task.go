@@ -1,19 +1,25 @@
 package transfer
 
+import (
+	"transfer/database"
+	"transfer/mongo"
+	"transfer/mysql"
+)
+
 // Source for transfer
 type Source interface {
-	Reader(query Query) (Packet, error)
+	Reader(query database.Query) (database.Packet, error)
 }
 
 // Target for transfer
 type Target interface {
-	Writer(packet Packet) error
+	Writer(packet database.Packet) error
 }
 
 // Task for transfer
 type Task struct {
 	config Configuration
-	Query  Query
+	Query  database.Query
 	Source Source
 	Target Target
 }
@@ -26,7 +32,13 @@ func NewTask(config Configuration) (task *Task, err error) {
 		Query:  config.Query,
 	}
 
-	sourceOptions := &DatabaseOptions{
+	for _, field := range config.Mapping {
+		if len(field.Target) == 0 {
+			field.Target = field.Source
+		}
+	}
+
+	sourceOptions := &database.Options{
 		Driver:  config.Source,
 		Mapping: config.Mapping,
 	}
@@ -35,7 +47,7 @@ func NewTask(config Configuration) (task *Task, err error) {
 		return nil, err
 	}
 
-	targetOptions := &DatabaseOptions{
+	targetOptions := &database.Options{
 		Driver:  config.Target,
 		Mapping: config.Mapping,
 	}
@@ -51,7 +63,7 @@ func NewTask(config Configuration) (task *Task, err error) {
 func (task *Task) Run() (err error) {
 
 	var (
-		result []M
+		result []database.M
 		query  = task.Query
 	)
 
@@ -69,6 +81,32 @@ func (task *Task) Run() (err error) {
 		if len(result) < query.Size {
 			break
 		}
+	}
+
+	return
+}
+
+// GenerateSourceTransfer return source transfer
+func GenerateSourceTransfer(args *database.Options) (source Source, err error) {
+
+	switch args.Driver.Driver {
+	case "mongodb":
+		source, err = mongo.NewMongoDB(args)
+	case "mysql":
+		source, err = mysql.NewMySQL(args)
+	}
+
+	return
+}
+
+// GenerateTargetTransfer return target transfer
+func GenerateTargetTransfer(args *database.Options) (target Target, err error) {
+
+	switch args.Driver.Driver {
+	case "mongodb":
+		target, err = mongo.NewMongoDB(args)
+	case "mysql":
+		target, err = mysql.NewMySQL(args)
 	}
 
 	return

@@ -1,4 +1,4 @@
-package transfer
+package mongo
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"transfer/database"
 )
 
 // MongoDB database transfer
@@ -15,11 +17,11 @@ type MongoDB struct {
 	database   string
 	collection string
 
-	Mapping Mapping
+	Mapping database.Mapping
 }
 
 // NewMongoDB return MongoDB transfer
-func NewMongoDB(args *DatabaseOptions) (*MongoDB, error) {
+func NewMongoDB(args *database.Options) (*MongoDB, error) {
 
 	var (
 		opts = options.Client()
@@ -64,11 +66,11 @@ func NewMongoDB(args *DatabaseOptions) (*MongoDB, error) {
 
 // Reader database
 // query: aggregation https://docs.mongodb.com/manual/aggregation/
-func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
+func (mongo *MongoDB) Reader(query database.Query) (packet database.Packet, err error) {
 
 	collection := mongo.client.Database(mongo.database).Collection(mongo.collection)
 
-	pipeline := []M{}
+	pipeline := []database.M{}
 
 	if err := query.UnmarshalQuery(&pipeline); err != nil {
 		return nil, err
@@ -76,15 +78,15 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 
 	// select fields
 	if len(mongo.Mapping) > 0 {
-		pipeline = append(pipeline, M{"$project": mongo.Mapping.FieldMap("$")})
+		pipeline = append(pipeline, database.M{"$project": mongo.Mapping.FieldMap("$")})
 	}
 
 	// offset
-	pipeline = append(pipeline, M{"$skip": (query.Page - 1) * query.Size})
+	pipeline = append(pipeline, database.M{"$skip": (query.Page - 1) * query.Size})
 
 	// page limit
 	if query.Size > 0 {
-		pipeline = append(pipeline, M{"$limit": query.Size})
+		pipeline = append(pipeline, database.M{"$limit": query.Size})
 	}
 
 	// set context
@@ -98,7 +100,7 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 	defer cur.Close(ctx)
 
 	for cur.Next(ctx) {
-		var row M
+		var row database.M
 		if err := cur.Decode(&row); err != nil {
 			return nil, err
 		}
@@ -108,7 +110,7 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 			return nil, err
 		}
 
-		pack := M{}
+		pack := database.M{}
 		for _, field := range mongo.Mapping {
 			pack[field.Target] = data[field.Target]
 		}
@@ -120,6 +122,6 @@ func (mongo *MongoDB) Reader(query Query) (packet Packet, err error) {
 }
 
 // Writer data
-func (mongo *MongoDB) Writer(packet Packet) error {
+func (mongo *MongoDB) Writer(packet database.Packet) error {
 	return nil
 }

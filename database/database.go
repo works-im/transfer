@@ -1,8 +1,6 @@
-package transfer
+package database
 
-import (
-	jsoniter "github.com/json-iterator/go"
-)
+import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -16,6 +14,28 @@ type Driver struct {
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
 	Table    string `mapstructure:"table"`
+}
+
+// FieldMeta database table schema
+type FieldMeta struct {
+	Field   string
+	Type    string
+	Null    interface{}
+	Key     interface{}
+	Default interface{}
+	Extra   interface{}
+}
+
+// Schema for database table
+type Schema []FieldMeta
+
+// FieldMap return FieldMeta map
+func (schema Schema) FieldMap() map[string]FieldMeta {
+	var m = map[string]FieldMeta{}
+	for _, f := range schema {
+		m[f.Field] = f
+	}
+	return m
 }
 
 // Query database query
@@ -36,34 +56,8 @@ func (q Query) UnmarshalQuery(v interface{}) error {
 	return json.Unmarshal([]byte(byteData), &v)
 }
 
-// DatabaseOptions for transfer
-type DatabaseOptions struct {
+// Options for transfer
+type Options struct {
 	Driver  Driver
 	Mapping Mapping
-}
-
-// GenerateSourceTransfer return source transfer
-func GenerateSourceTransfer(args *DatabaseOptions) (source Source, err error) {
-
-	switch args.Driver.Driver {
-	case "mongodb":
-		source, err = NewMongoDB(args)
-	case "mysql":
-		source, err = NewMySQL(args)
-	}
-
-	return
-}
-
-// GenerateTargetTransfer return target transfer
-func GenerateTargetTransfer(args *DatabaseOptions) (target Target, err error) {
-
-	switch args.Driver.Driver {
-	case "mongodb":
-		target, err = NewMongoDB(args)
-	case "mysql":
-		target, err = NewMySQL(args)
-	}
-
-	return
 }

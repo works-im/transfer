@@ -1,19 +1,25 @@
+source-mongodb-driver: &source-mongodb-driver
+  driver: mongodb
+  host: localhost
+  port: 27017
+  database: source-database
+  username: root
+  password:
+
+target-mysql-driver: &target-mysql-driver
+  driver: mysql
+  host: localhost
+  port: 3306
+  database: target-database
+  username: root
+  password:
+
 task:
   source:
-    driver: mongodb
-    host: localhost
-    port: 27017
-    database:
-    username:
-    password:
+    <<: *source-mongodb-driver
     table: atomic
   target:
-    driver: mysql
-    host: localhost
-    port: 3306
-    database:
-    username:
-    password:
+    <<: *target-mysql-driver
     table: atomics
   mapping:
     - source: _id
@@ -21,7 +27,6 @@ task:
       target_type: string
     - source: atomic.atomic_class_info.resource_type
       target: resource_type
-      target_type: string
   query:
     page: 1
     size: 1000
