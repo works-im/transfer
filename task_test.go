@@ -2,9 +2,10 @@ package transfer
 
 import (
 	"testing"
-	"transfer/database"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/works-im/transfer/database"
 )
 
 func TestTask(t *testing.T) {

@@ -1,7 +1,7 @@
 package transfer
 
 import (
-	"transfer/database"
+	"github.com/works-im/transfer/database"
 )
 
 // Configuration task configuration

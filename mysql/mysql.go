@@ -10,7 +10,7 @@ import (
 	"github.com/araddon/dateparse"
 	_ "github.com/go-sql-driver/mysql" // mysql driver
 
-	"transfer/database"
+	"github.com/works-im/transfer/database"
 )
 
 // MySQL database transfer

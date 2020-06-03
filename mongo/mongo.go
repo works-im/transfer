@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"transfer/database"
+	"github.com/works-im/transfer/database"
 )
 
 // MongoDB database transfer
