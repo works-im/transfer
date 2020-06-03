@@ -1,9 +1,9 @@
 package transfer
 
 import (
-	"transfer/database"
-	"transfer/mongo"
-	"transfer/mysql"
+	"github.com/works-im/transfer/database"
+	"github.com/works-im/transfer/mongo"
+	"github.com/works-im/transfer/mysql"
 )
 
 // Source for transfer

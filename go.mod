@@ -1,4 +1,4 @@
-module transfer
+module github.com/works-im/transfer
 
 go 1.14
 

@@ -1,6 +1,6 @@
 package main
 
-import "transfer/cmd"
+import "github.com/works-im/transfer/cmd"
 
 func main() {
 	cmd.Execute()
