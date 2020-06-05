@@ -162,11 +162,14 @@ func (mysql *MySQL) Writer(packet database.Packet) error {
 				if err != nil {
 					return err
 				}
+
+				timeStr := time.Format("2006-01-02 15:04:05")
+
 				switch field.Type {
 				case Date, Time, Year:
-					values = append(values, field.Type.String()+"(FROM_UNIXTIME("+fmt.Sprint(time.Unix())+"))")
+					values = append(values, fmt.Sprintf("%s('%s')", field.Type, timeStr))
 				case Datetime, Timestamp:
-					values = append(values, "FROM_UNIXTIME("+fmt.Sprint(time.Unix())+")")
+					values = append(values, fmt.Sprintf("'%s'", timeStr))
 				}
 			}
 		}
